@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Odoo FatturaPa Viewer",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Allows to quickly preview any FatturaPa XML file attached to an invoice or vendor bill.",
   "icons": {
     "16": "icon/icon-16.png",
@@ -9,25 +9,14 @@
     "48": "icon/icon-48.png",
     "128": "icon/icon-128.png"
   },
-  "permissions": [],
-  "host_permissions": [
-    "https://*.odoo.com/odoo/*",
-    "https://odoo.*/odoo/*"
-  ],
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": [
-        "content.js",
-        "forge.min.js"
-      ],
-      "run_at": "document_end"
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": ["transform.xslt"],
-      "matches": ["<all_urls>"]
-    }
-  ]
+  "permissions": ["storage", "scripting", "activeTab"],
+  "host_permissions": ["https://*.odoo.com/*", "http://*.odoo.com/*"],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
+  "background": { "service_worker": "bg.js", "type": "module" },
+  "content_scripts": [{
+    "matches": ["https://*.odoo.com/*", "http://*.odoo.com/*"],
+    "js": ["intercept.js"],
+    "run_at": "document_start"
+  }],
+  "action": { "default_title": "XML Previewer", "default_popup": "popup.html" }
 }

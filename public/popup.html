@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>XML Previewer Sites</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="wrap">
+      <h1>Allowed sites</h1>
+      <p class="lead">The preview runs only on these hostnames.</p>
+      <ul id="list" class="list" aria-live="polite"></ul>
+      <div class="add">
+        <button id="addBtn" type="button">Add current site</button>
+      </div>
+      <p class="note">Reload the page after adding a site to activate the preview.</p>
+      <div class="status" id="status" role="status" aria-live="polite"></div>
+      <p class="hint">Default: <code>*.odoo.com</code></p>
+    </main>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
