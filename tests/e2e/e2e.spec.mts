@@ -20,7 +20,9 @@ type FixtureServer = {
 
 async function startFixtureServer(): Promise<FixtureServer> {
   const html = await readFile(path.join(fixturesDir, "test.html"));
+  const htmlP7m = await readFile(path.join(fixturesDir, "test-p7m.html"));
   const xml = await readFile(path.join(fixturesDir, "test.xml"));
+  const xmlP7m = await readFile(path.join(fixturesDir, "test.xml.p7m"));
 
   const server = createServer((req, res) => {
     if (!req.url || req.url === "/" || req.url === "/test.html") {
@@ -28,9 +30,19 @@ async function startFixtureServer(): Promise<FixtureServer> {
       res.end(html);
       return;
     }
+    if (req.url === "/test-p7m.html") {
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.end(htmlP7m);
+      return;
+    }
     if (req.url === "/test.xml") {
       res.writeHead(200, { "Content-Type": "application/xml; charset=utf-8" });
       res.end(xml);
+      return;
+    }
+    if (req.url === "/test.xml.p7m") {
+      res.writeHead(200, { "Content-Type": "application/pkcs7-mime" });
+      res.end(xmlP7m);
       return;
     }
     res.writeHead(404);
@@ -132,6 +144,76 @@ test("intercepts XML download and renders preview", async () => {
   } catch (error) {
     const targetPage = viewerPage || page;
     await captureScreenshot(targetPage, "preview-failure");
+    throw error;
+  } finally {
+    await context.close();
+    await close();
+    await rm(userDataDir, { recursive: true, force: true });
+  }
+});
+
+test("intercepts XML.P7M download and renders preview", async () => {
+  const userDataDir = await mkdtemp(
+    path.join(os.tmpdir(), "odoo-fatturapa-e2e-")
+  );
+  const { port, close } = await startFixtureServer();
+  const headless = process.env.HEADLESS === "1";
+
+  const context = await chromium.launchPersistentContext(userDataDir, {
+    headless,
+    args: [
+      `--disable-extensions-except=${distRoot}`,
+      `--load-extension=${distRoot}`,
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--disable-features=TranslateUI",
+      "--disable-background-networking",
+      "--disable-sync",
+      "--metrics-recording-only",
+      "--disable-component-update",
+      "--disable-default-apps",
+      "--disable-popup-blocking",
+      "--disable-hang-monitor",
+      "--disable-prompt-on-repost",
+      "--disable-ipc-flooding-protection",
+      "--password-store=basic",
+      `--host-resolver-rules=MAP test.odoo.com 127.0.0.1`,
+    ],
+  });
+
+  let page: Page | undefined;
+  let viewerPage: Page | undefined;
+
+  try {
+    page = await context.newPage();
+    await page.goto(`http://test.odoo.com:${port}/test-p7m.html`, {
+      waitUntil: "domcontentloaded",
+    });
+
+    const viewerPromise = context
+      .waitForEvent("page", {
+        timeout: 20000,
+      })
+      .catch(() => {
+        throw new Error(
+          "Viewer window did not open. Ensure extensions are enabled; headless mode often blocks extension loading."
+        );
+      });
+    await page.click("#download");
+
+    viewerPage = await viewerPromise;
+    await viewerPage.waitForURL(/viewer\.html/);
+    await viewerPage.waitForFunction(() => {
+      const status = document.getElementById("status");
+      const out = document.getElementById("out");
+      return Boolean(status && status.textContent === "" && out?.children.length);
+    });
+    await expect(viewerPage.getByText("Prodotto demo")).toBeVisible();
+
+    await captureScreenshot(viewerPage, "preview-p7m-success");
+  } catch (error) {
+    const targetPage = viewerPage || page;
+    await captureScreenshot(targetPage, "preview-p7m-failure");
     throw error;
   } finally {
     await context.close();

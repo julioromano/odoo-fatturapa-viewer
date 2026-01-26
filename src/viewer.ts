@@ -1,5 +1,7 @@
 // viewer.ts
 
+import { extractPkcs7Content } from "./pkcs7";
+
 async function main(): Promise<void> {
   const statusEl = document.getElementById("status") as HTMLElement;
   const outEl = document.getElementById("out") as HTMLElement;
@@ -7,6 +9,16 @@ async function main(): Promise<void> {
 
   let xmlContent: string | null = null;
   let filename = "download.xml";
+
+  function isSignedFilename(name: string): boolean {
+    return /\.p7m$/i.test(name);
+  }
+
+  function normalizeSignedFilename(name: string): string {
+    const base = name.replace(/\.p7m$/i, "");
+    if (/\.xml$/i.test(base)) return base;
+    return `${base}.xml`;
+  }
 
   // Helper to trigger download
   function triggerDownload(): void {
@@ -45,8 +57,16 @@ async function main(): Promise<void> {
     const bin = atob(data.xml_blob_b64);
     const bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    xmlContent = new TextDecoder().decode(bytes);
     filename = data.xml_filename || "download.xml";
+    if (isSignedFilename(filename)) {
+      xmlContent = extractPkcs7Content(bytes);
+      filename = normalizeSignedFilename(filename);
+      if (!xmlContent.includes("<FatturaElettronicaHeader")) {
+        throw new Error("Signed XML is not a FatturaPA invoice.");
+      }
+    } else {
+      xmlContent = new TextDecoder().decode(bytes);
+    }
 
     // Render
     statusEl.textContent = "Rendering...";
