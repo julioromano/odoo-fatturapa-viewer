@@ -1,18 +1,24 @@
 import { chromium, expect, test } from "@playwright/test";
-import { createServer } from "http";
-import { mkdir, mkdtemp, readFile, rm } from "fs/promises";
-import os from "os";
-import path from "path";
-import { fileURLToPath } from "url";
+import type { Page } from "@playwright/test";
+import { createServer } from "node:http";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const repoRoot = path.resolve(__dirname, "..");
+const repoRoot = path.resolve(__dirname, "../..");
 const distRoot = path.join(repoRoot, "dist");
 const fixturesDir = path.join(repoRoot, "tests", "fixtures");
 const screenshotsDir = path.join(repoRoot, "artifacts", "screenshots");
 
-async function startFixtureServer() {
+type FixtureServer = {
+  port: number;
+  close: () => Promise<void>;
+};
+
+async function startFixtureServer(): Promise<FixtureServer> {
   const html = await readFile(path.join(fixturesDir, "test.html"));
   const xml = await readFile(path.join(fixturesDir, "test.xml"));
 
@@ -31,7 +37,7 @@ async function startFixtureServer() {
     res.end("Not found");
   });
 
-  await new Promise((resolve) => {
+  await new Promise<void>((resolve) => {
     server.listen(0, "127.0.0.1", () => resolve());
   });
 
@@ -43,7 +49,7 @@ async function startFixtureServer() {
   return {
     port: address.port,
     close: () =>
-      new Promise((resolve, reject) => {
+      new Promise<void>((resolve, reject) => {
         server.close((err) => {
           if (err) reject(err);
           else resolve();
@@ -52,11 +58,11 @@ async function startFixtureServer() {
   };
 }
 
-function sanitizeFilename(value) {
+function sanitizeFilename(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
-async function captureScreenshot(page, name) {
+async function captureScreenshot(page: Page | undefined, name: string): Promise<void> {
   if (!page) return;
   await mkdir(screenshotsDir, { recursive: true });
   const filename = `${sanitizeFilename(name)}.png`;
@@ -93,8 +99,8 @@ test("intercepts XML download and renders preview", async () => {
     ],
   });
 
-  let page;
-  let viewerPage;
+  let page: Page | undefined;
+  let viewerPage: Page | undefined;
 
   try {
     page = await context.newPage();
@@ -102,13 +108,15 @@ test("intercepts XML download and renders preview", async () => {
       waitUntil: "domcontentloaded",
     });
 
-    const viewerPromise = context.waitForEvent("page", {
-      timeout: 20000,
-    }).catch(() => {
-      throw new Error(
-        "Viewer window did not open. Ensure extensions are enabled; headless mode often blocks extension loading."
-      );
-    });
+    const viewerPromise = context
+      .waitForEvent("page", {
+        timeout: 20000,
+      })
+      .catch(() => {
+        throw new Error(
+          "Viewer window did not open. Ensure extensions are enabled; headless mode often blocks extension loading."
+        );
+      });
     await page.click("#download");
 
     viewerPage = await viewerPromise;

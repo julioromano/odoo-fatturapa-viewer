@@ -1,5 +1,5 @@
 const config = {
-  testDir: "tests",
+  testDir: "tests/e2e",
   timeout: 60000,
   outputDir: "artifacts/test-results",
   reporter: [["github"], ["html", { open: "never", outputFolder: "artifacts/playwright-report" }]],
