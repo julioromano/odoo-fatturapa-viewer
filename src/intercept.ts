@@ -1,6 +1,6 @@
 // intercept.ts — minimal capture for blob: XML downloads
 
-import { shouldHandleInvoice } from "./intercept-filter";
+import { isAllowedExtension, shouldHandleInvoice } from "./intercept-filter";
 
 (function () {
   const aClick = HTMLAnchorElement.prototype.click;
@@ -14,6 +14,12 @@ import { shouldHandleInvoice } from "./intercept-filter";
   function inferName(downloadName?: string | null): string | null {
     if (!downloadName) return null;
     return downloadName;
+  }
+
+  function shouldAttemptIntercept(downloadName?: string | null): boolean {
+    const name = inferName(downloadName);
+    if (!name) return false;
+    return isAllowedExtension(name);
   }
 
   async function handleBlob(url: string, downloadName?: string | null): Promise<boolean> {
@@ -50,12 +56,13 @@ import { shouldHandleInvoice } from "./intercept-filter";
       if (!a) return;
       const href = a.getAttribute("href") || "";
       if (!href.startsWith("blob:")) return;
+      if (!shouldAttemptIntercept(a.getAttribute("download"))) return;
       if (a.dataset.xmlPreviewBypass === "1") {
         delete a.dataset.xmlPreviewBypass;
         return;
       }
 
-      // Prevent download immediately; re-trigger only if it's not XML.
+      // Prevent download immediately; re-trigger only if it's not FatturaPA.
       ev.preventDefault();
       ev.stopImmediatePropagation();
 
@@ -74,6 +81,9 @@ import { shouldHandleInvoice } from "./intercept-filter";
   HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement): void {
     const href = this.getAttribute("href") || "";
     if (href.startsWith("blob:")) {
+      if (!shouldAttemptIntercept(this.getAttribute("download"))) {
+        return aClick.call(this);
+      }
       handleBlob(href, this.getAttribute("download")).then((handled) => {
         if (!handled) aClick.call(this);
       });
