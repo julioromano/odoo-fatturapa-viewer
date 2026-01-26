@@ -1,5 +1,7 @@
 // intercept.ts — minimal capture for blob: XML downloads
 
+import { isAllowedExtension, shouldHandleInvoice } from "./intercept-filter";
+
 (function () {
   const aClick = HTMLAnchorElement.prototype.click;
   const B64 = (buf: ArrayBuffer): string => {
@@ -9,8 +11,15 @@
     return btoa(bin);
   };
 
-  function inferName(downloadName?: string | null): string {
-    return downloadName || "download.xml";
+  function inferName(downloadName?: string | null): string | null {
+    if (!downloadName) return null;
+    return downloadName;
+  }
+
+  function shouldAttemptIntercept(downloadName?: string | null): boolean {
+    const name = inferName(downloadName);
+    if (!name) return false;
+    return isAllowedExtension(name);
   }
 
   async function handleBlob(url: string, downloadName?: string | null): Promise<boolean> {
@@ -24,10 +33,11 @@
     }
 
     const name = inferName(downloadName);
-    const isXml = /xml/i.test(blob.type) || /\.xml$/i.test(name);
-    if (!isXml) return false;
+    if (!name) return false;
 
     const buf = await blob.arrayBuffer();
+    if (!shouldHandleInvoice(blob.type, name, buf)) return false;
+
     const b64 = B64(buf);
     chrome.runtime.sendMessage({
       kind: "XML_BYTES_B64",
@@ -46,12 +56,13 @@
       if (!a) return;
       const href = a.getAttribute("href") || "";
       if (!href.startsWith("blob:")) return;
+      if (!shouldAttemptIntercept(a.getAttribute("download"))) return;
       if (a.dataset.xmlPreviewBypass === "1") {
         delete a.dataset.xmlPreviewBypass;
         return;
       }
 
-      // Prevent download immediately; re-trigger only if it's not XML.
+      // Prevent download immediately; re-trigger only if it's not FatturaPA.
       ev.preventDefault();
       ev.stopImmediatePropagation();
 
@@ -70,6 +81,9 @@
   HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement): void {
     const href = this.getAttribute("href") || "";
     if (href.startsWith("blob:")) {
+      if (!shouldAttemptIntercept(this.getAttribute("download"))) {
+        return aClick.call(this);
+      }
       handleBlob(href, this.getAttribute("download")).then((handled) => {
         if (!handled) aClick.call(this);
       });
