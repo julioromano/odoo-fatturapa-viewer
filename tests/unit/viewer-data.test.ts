@@ -25,7 +25,7 @@ describe("viewer data helpers", () => {
 
   it("rejects signed payloads without invoice header", () => {
     expect(() => assertSignedInvoiceXml("<Root/>")).toThrow(
-      "Signed XML is not a FatturaPA invoice."
+      "Signed XML is not a FatturaPA invoice.",
     );
   });
 

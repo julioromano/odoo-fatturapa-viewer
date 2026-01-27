@@ -76,7 +76,7 @@ import { isAllowedExtension, shouldHandleInvoice } from "./intercept-filter";
         }
       });
     },
-    true
+    true,
   );
   HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement): void {
     const href = this.getAttribute("href") || "";

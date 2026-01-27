@@ -1,15 +1,15 @@
 /**
  * End-to-end tests for the Odoo FatturaPA Viewer extension.
- * 
+ *
  * Tests the extension's ability to intercept XML and P7M (PKCS#7 signed) file downloads
  * and render previews in a viewer window.
- * 
+ *
  * @remarks
  * - Uses Playwright to launch a persistent Chrome context with the extension loaded
  * - Sets up a local fixture server to serve test HTML and XML files
  * - Verifies that clicking the download button opens the viewer with correct content
  * - Captures screenshots for both regular XML and signed P7M files
- * 
+ *
  * @see {@link runPreviewTest} for the main test execution flow
  * @see {@link startFixtureServer} for fixture server setup
  */
@@ -110,7 +110,10 @@ async function startFixtureServer(): Promise<FixtureServer> {
 }
 
 function sanitizeFilename(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 async function captureScreenshot(page: Page | undefined, name: string): Promise<void> {
@@ -129,22 +132,22 @@ type PreviewOptions = {
 
 /**
  * Executes an end-to-end preview test by launching a persistent browser context with the extension loaded.
- * 
+ *
  * This function sets up an isolated browser environment to test the extension's viewer functionality in a
  * controlled manner. It manages the complete lifecycle of the test including server startup, browser context
  * creation, extension loading, and cleanup to ensure tests are reproducible and don't leave artifacts behind.
- * 
+ *
  * The persistent context approach allows the extension to maintain state across pages, simulating real user
  * behavior where the extension remains active throughout the browser session. Temporary directories and processes
  * are explicitly managed and cleaned up to prevent resource leaks and ensure test isolation.
- * 
+ *
  * @param options - Configuration for the preview test, including fixture path and screenshot name
  * @param run - Callback function executed once the viewer page has fully loaded and rendered content
  * @throws {Error} When the viewer window fails to open, the extension isn't properly loaded, or the test callback throws
  */
 async function runPreviewTest(
   options: PreviewOptions,
-  run: (viewerPage: Page) => Promise<void>
+  run: (viewerPage: Page) => Promise<void>,
 ): Promise<void> {
   let userDataDir: string | undefined;
   let closeServer: (() => Promise<void>) | undefined;
@@ -153,9 +156,7 @@ async function runPreviewTest(
   let viewerPage: Page | undefined;
 
   try {
-    userDataDir = await mkdtemp(
-      path.join(os.tmpdir(), "odoo-fatturapa-e2e-")
-    );
+    userDataDir = await mkdtemp(path.join(os.tmpdir(), "odoo-fatturapa-e2e-"));
     const { port, close } = await startFixtureServer();
     closeServer = close;
     const headless = process.env.HEADLESS === "1";
@@ -195,7 +196,7 @@ async function runPreviewTest(
       })
       .catch(() => {
         throw new Error(
-          "Viewer window did not open. Ensure extensions are enabled; headless mode often blocks extension loading."
+          "Viewer window did not open. Ensure extensions are enabled; headless mode often blocks extension loading.",
         );
       });
 
@@ -235,10 +236,9 @@ async function runPreviewTest(
       err.message = `Preview flow failed for ${options.fixturePath}: ${err.message}`;
       throw err;
     } else {
-      const error = new Error(
-        `Preview flow failed for ${options.fixturePath}: ${String(err)}`,
-        {cause: err},
-      );
+      const error = new Error(`Preview flow failed for ${options.fixturePath}: ${String(err)}`, {
+        cause: err,
+      });
       throw error;
     }
   } finally {
@@ -263,7 +263,7 @@ test("intercepts XML download and renders preview", async () => {
     },
     async (viewerPage) => {
       await expect(viewerPage.getByText("Prodotto demo")).toBeVisible();
-    }
+    },
   );
 });
 
@@ -275,7 +275,7 @@ test("intercepts XML.P7M download and renders preview", async () => {
     },
     async (viewerPage) => {
       await expect(viewerPage.getByText("Prodotto demo")).toBeVisible();
-    }
+    },
   );
 });
 
@@ -293,7 +293,7 @@ test("offers fallback download when XML.P7M extraction fails", async () => {
       });
       await expect(downloadButton).toBeEnabled();
       await expect(viewerPage.locator("#out")).toBeEmpty();
-    }
+    },
   );
 });
 
@@ -311,6 +311,6 @@ test("disables download and resets label when XML rendering fails", async () => 
       });
       await expect(downloadButton).toBeDisabled();
       await expect(viewerPage.locator("#out")).toBeEmpty();
-    }
+    },
   );
 });

@@ -62,7 +62,7 @@ async function main(): Promise<void> {
     }
 
     // Blob mode
-    const data = await chrome.storage.session.get(["xml_blob_b64", "xml_filename"]) as {
+    const data = (await chrome.storage.session.get(["xml_blob_b64", "xml_filename"])) as {
       xml_blob_b64?: string;
       xml_filename?: string;
     };
@@ -84,7 +84,7 @@ async function main(): Promise<void> {
         originalFilename,
         originalB64,
         hadError: false,
-      })
+      }),
     );
 
     // Render
@@ -122,7 +122,7 @@ async function main(): Promise<void> {
         originalFilename,
         originalB64,
         hadError: true,
-      })
+      }),
     );
   }
 }

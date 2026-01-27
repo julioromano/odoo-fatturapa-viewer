@@ -21,11 +21,7 @@ export function containsFatturaHeader(xmlText: string): boolean {
   return xmlText.includes("<FatturaElettronicaHeader");
 }
 
-export function shouldHandleInvoice(
-  mime: string,
-  filename: string,
-  bytes?: ArrayBuffer
-): boolean {
+export function shouldHandleInvoice(mime: string, filename: string, bytes?: ArrayBuffer): boolean {
   if (!isAllowedMime(mime)) return false;
   if (!isAllowedExtension(filename)) return false;
 

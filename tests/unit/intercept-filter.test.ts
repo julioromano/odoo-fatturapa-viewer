@@ -20,11 +20,9 @@ describe("intercept filter", () => {
   });
 
   it("rejects unrelated mime types", () => {
-    expect(
-      isAllowedMime(
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-      )
-    ).toBe(false);
+    expect(isAllowedMime("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")).toBe(
+      false,
+    );
     expect(isAllowedMime("text/xml")).toBe(false);
     expect(isAllowedMime("")).toBe(false);
   });
@@ -42,22 +40,16 @@ describe("intercept filter", () => {
 
   it("handles xml with fattura header", () => {
     const bytes = encoder.encode(fatturaXml).buffer;
-    expect(shouldHandleInvoice("application/xml", "invoice.xml", bytes)).toBe(
-      true
-    );
+    expect(shouldHandleInvoice("application/xml", "invoice.xml", bytes)).toBe(true);
   });
 
   it("rejects xml without fattura header", () => {
     const bytes = encoder.encode(nonFatturaXml).buffer;
-    expect(shouldHandleInvoice("application/xml", "invoice.xml", bytes)).toBe(
-      false
-    );
+    expect(shouldHandleInvoice("application/xml", "invoice.xml", bytes)).toBe(false);
   });
 
   it("allows xml.p7m without header sniff", () => {
-    expect(
-      shouldHandleInvoice("application/pkcs7-mime", "invoice.xml.p7m")
-    ).toBe(true);
+    expect(shouldHandleInvoice("application/pkcs7-mime", "invoice.xml.p7m")).toBe(true);
   });
 
   it("requires header sniff only for plain xml", () => {

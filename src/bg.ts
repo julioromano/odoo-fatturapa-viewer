@@ -77,7 +77,7 @@ chrome.runtime.onMessage.addListener((msg: unknown) => {
           width: 900,
           height: 1000,
         });
-      }
+      },
     );
     // no async response
   }
