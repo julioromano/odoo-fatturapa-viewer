@@ -16,7 +16,7 @@ export function isAllowedExtension(filename: string): boolean {
 }
 
 export function requiresHeaderSniff(filename: string): boolean {
-  return /\.xml$/i.test(filename) && !isSignedXmlP7m(filename);
+  return /\.xml$/i.test(filename);
 }
 
 export function containsFatturaHeader(xmlText: string): boolean {
