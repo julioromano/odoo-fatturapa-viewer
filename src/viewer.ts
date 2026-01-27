@@ -1,7 +1,7 @@
 // viewer.ts
 
-import { getDownloadState, type DownloadMode } from "./viewer-logic";
 import { decodeBase64ToBytes, resolveXmlPayload } from "./viewer-data";
+import { type DownloadMode, getDownloadState } from "./viewer-logic";
 
 async function main(): Promise<void> {
   const statusEl = document.getElementById("status") as HTMLElement;
@@ -94,7 +94,7 @@ async function main(): Promise<void> {
 
     const parseErr = xmlDoc.querySelector("parsererror");
     if (parseErr) {
-      throw new Error("XML Parse Error: " + parseErr.textContent);
+      throw new Error(`XML Parse Error: ${parseErr.textContent}`);
     }
 
     // Load XSLT

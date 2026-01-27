@@ -13,13 +13,14 @@
  * @see {@link runPreviewTest} for the main test execution flow
  * @see {@link startFixtureServer} for fixture server setup
  */
-import { chromium, expect, test } from "@playwright/test";
-import type { Page } from "@playwright/test";
-import { createServer } from "node:http";
+
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { createServer } from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import type { Page } from "@playwright/test";
+import { chromium, expect, test } from "@playwright/test";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -220,7 +221,7 @@ async function runPreviewTest(
       } else {
         await viewerPage?.waitForFunction(() => {
           const status = document.getElementById("status");
-          return Boolean(status && status.textContent?.startsWith("Error:"));
+          return Boolean(status?.textContent?.startsWith("Error:"));
         });
       }
     });

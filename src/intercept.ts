@@ -2,7 +2,7 @@
 
 import { isAllowedExtension, shouldHandleInvoice } from "./intercept-filter";
 
-(function () {
+(() => {
   const aClick = HTMLAnchorElement.prototype.click;
   const B64 = (buf: ArrayBuffer): string => {
     const bytes = new Uint8Array(buf);
@@ -82,14 +82,16 @@ import { isAllowedExtension, shouldHandleInvoice } from "./intercept-filter";
     const href = this.getAttribute("href") || "";
     if (href.startsWith("blob:")) {
       if (!shouldAttemptIntercept(this.getAttribute("download"))) {
-        return aClick.call(this);
+        aClick.call(this);
+        return;
       }
       handleBlob(href, this.getAttribute("download")).then((handled) => {
         if (!handled) aClick.call(this);
       });
       return;
     }
-    return aClick.call(this);
+    aClick.call(this);
+    return;
   };
 
   console.log("[xml-preview][cs] intercept loaded");
