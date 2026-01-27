@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bad XML Download Trigger</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        padding: 24px;
+      }
+      button {
+        font-size: 16px;
+        padding: 10px 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <button id="download">Download Bad XML</button>
+    <script>
+      const button = document.getElementById("download");
+      button.addEventListener("click", async () => {
+        const resp = await fetch("/test-bad.xml");
+        const text = await resp.text();
+        const blob = new Blob([text], { type: "application/xml" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "fattura-bad.xml";
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          link.remove();
+          URL.revokeObjectURL(url);
+        }, 0);
+      });
+    </script>
+  </body>
+</html>

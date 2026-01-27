@@ -7,6 +7,7 @@ async function main(): Promise<void> {
   const statusEl = document.getElementById("status") as HTMLElement;
   const outEl = document.getElementById("out") as HTMLElement;
   const downloadBtn = document.getElementById("downloadBtn") as HTMLButtonElement | null;
+  const defaultDownloadLabel = downloadBtn?.textContent || "Download";
 
   let xmlContent: string | null = null;
   let filename = "download.xml";
@@ -19,7 +20,7 @@ async function main(): Promise<void> {
     downloadMode = state.mode;
     if (downloadBtn) {
       downloadBtn.disabled = !downloadMode;
-      if (state.label) downloadBtn.textContent = state.label;
+      downloadBtn.textContent = state.label ?? defaultDownloadLabel;
     }
   }
 

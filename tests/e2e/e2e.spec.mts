@@ -35,9 +35,11 @@ type FixtureServer = {
 
 async function startFixtureServer(): Promise<FixtureServer> {
   const html = await readFile(path.join(fixturesDir, "test.html"));
+  const htmlBad = await readFile(path.join(fixturesDir, "test-bad.html"));
   const htmlP7m = await readFile(path.join(fixturesDir, "test-p7m.html"));
   const htmlBadP7m = await readFile(path.join(fixturesDir, "test-bad-p7m.html"));
   const xml = await readFile(path.join(fixturesDir, "test.xml"));
+  const xmlBad = await readFile(path.join(fixturesDir, "test-bad.xml"));
   const xmlP7m = await readFile(path.join(fixturesDir, "test.xml.p7m"));
   const xmlBadP7m = await readFile(path.join(fixturesDir, "test-bad.xml.p7m"));
 
@@ -45,6 +47,11 @@ async function startFixtureServer(): Promise<FixtureServer> {
     if (!req.url || req.url === "/" || req.url === "/test.html") {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
       res.end(html);
+      return;
+    }
+    if (req.url === "/test-bad.html") {
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.end(htmlBad);
       return;
     }
     if (req.url === "/test-p7m.html") {
@@ -60,6 +67,11 @@ async function startFixtureServer(): Promise<FixtureServer> {
     if (req.url === "/test.xml") {
       res.writeHead(200, { "Content-Type": "application/xml; charset=utf-8" });
       res.end(xml);
+      return;
+    }
+    if (req.url === "/test-bad.xml") {
+      res.writeHead(200, { "Content-Type": "application/xml; charset=utf-8" });
+      res.end(xmlBad);
       return;
     }
     if (req.url === "/test.xml.p7m") {
@@ -166,9 +178,11 @@ async function runPreviewTest(
   let viewerPage: Page | undefined;
 
   try {
-    page = await context.newPage();
-    await page.goto(`http://test.odoo.com:${port}/${options.fixturePath}`, {
-      waitUntil: "domcontentloaded",
+    await test.step("open fixture page", async () => {
+      page = await context.newPage();
+      await page.goto(`http://test.odoo.com:${port}/${options.fixturePath}`, {
+        waitUntil: "domcontentloaded",
+      });
     });
 
     const viewerPromise = context
@@ -180,27 +194,49 @@ async function runPreviewTest(
           "Viewer window did not open. Ensure extensions are enabled; headless mode often blocks extension loading."
         );
       });
-    await page.click("#download");
 
-    viewerPage = await viewerPromise;
-    await viewerPage.waitForURL(/viewer\.html/);
-    const waitFor = options.waitFor ?? "success";
-    if (waitFor === "success") {
-      await viewerPage.waitForFunction(() => {
-        const status = document.getElementById("status");
-        const out = document.getElementById("out");
-        return Boolean(status && status.textContent === "" && out?.children.length);
-      });
-    } else {
-      await viewerPage.waitForFunction(() => {
-        const status = document.getElementById("status");
-        return Boolean(status && status.textContent?.startsWith("Error:"));
-      });
-    }
-    await run(viewerPage);
+    await test.step("click download button", async () => {
+      await page?.click("#download");
+    });
+
+    await test.step("wait for viewer window", async () => {
+      viewerPage = await viewerPromise;
+      await viewerPage.waitForURL(/viewer\.html/);
+    });
+
+    await test.step("wait for render", async () => {
+      const waitFor = options.waitFor ?? "success";
+      if (waitFor === "success") {
+        await viewerPage?.waitForFunction(() => {
+          const status = document.getElementById("status");
+          const out = document.getElementById("out");
+          return Boolean(status && status.textContent === "" && out?.children.length);
+        });
+      } else {
+        await viewerPage?.waitForFunction(() => {
+          const status = document.getElementById("status");
+          return Boolean(status && status.textContent?.startsWith("Error:"));
+        });
+      }
+    });
+
+    await test.step("assert viewer content", async () => {
+      if (!viewerPage) {
+        throw new Error("Viewer page was not created.");
+      }
+      await run(viewerPage);
+    });
   } catch (err) {
-    const details = err instanceof Error ? err.message : String(err);
-    throw new Error(`Preview flow failed for ${options.fixturePath}: ${details}`);
+    if (err instanceof Error) {
+      err.message = `Preview flow failed for ${options.fixturePath}: ${err.message}`;
+      throw err;
+    } else {
+      const error = new Error(
+        `Preview flow failed for ${options.fixturePath}: ${String(err)}`,
+        {cause: err},
+      );
+      throw error;
+    }
   } finally {
     await captureScreenshot(viewerPage || page, options.screenshotName);
     await context.close();
@@ -246,6 +282,24 @@ test("offers fallback download when XML.P7M extraction fails", async () => {
         name: "Download original .p7m",
       });
       await expect(downloadButton).toBeEnabled();
+      await expect(viewerPage.locator("#out")).toBeEmpty();
+    }
+  );
+});
+
+test("disables download and resets label when XML rendering fails", async () => {
+  await runPreviewTest(
+    {
+      fixturePath: "test-bad.html",
+      screenshotName: "preview-xml-error",
+      waitFor: "error",
+    },
+    async (viewerPage) => {
+      await expect(viewerPage.getByText(/^Error:/)).toBeVisible();
+      const downloadButton = viewerPage.getByRole("button", {
+        name: "Download anyway",
+      });
+      await expect(downloadButton).toBeDisabled();
       await expect(viewerPage.locator("#out")).toBeEmpty();
     }
   );
