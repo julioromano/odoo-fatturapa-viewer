@@ -1,6 +1,5 @@
 // viewer.ts
 
-import { isSignedXmlP7m } from "./filename";
 import { getDownloadState, type DownloadMode } from "./viewer-logic";
 import { decodeBase64ToBytes, resolveXmlPayload } from "./viewer-data";
 
