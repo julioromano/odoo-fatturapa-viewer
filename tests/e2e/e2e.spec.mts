@@ -146,38 +146,42 @@ async function runPreviewTest(
   options: PreviewOptions,
   run: (viewerPage: Page) => Promise<void>
 ): Promise<void> {
-  const userDataDir = await mkdtemp(
-    path.join(os.tmpdir(), "odoo-fatturapa-e2e-")
-  );
-  const { port, close } = await startFixtureServer();
-  const headless = process.env.HEADLESS === "1";
-
-  const context = await chromium.launchPersistentContext(userDataDir, {
-    headless,
-    args: [
-      `--disable-extensions-except=${distRoot}`,
-      `--load-extension=${distRoot}`,
-      "--no-first-run",
-      "--no-default-browser-check",
-      "--disable-features=TranslateUI",
-      "--disable-background-networking",
-      "--disable-sync",
-      "--metrics-recording-only",
-      "--disable-component-update",
-      "--disable-default-apps",
-      "--disable-popup-blocking",
-      "--disable-hang-monitor",
-      "--disable-prompt-on-repost",
-      "--disable-ipc-flooding-protection",
-      "--password-store=basic",
-      `--host-resolver-rules=MAP test.odoo.com 127.0.0.1`,
-    ],
-  });
-
+  let userDataDir: string | undefined;
+  let closeServer: (() => Promise<void>) | undefined;
+  let context: Awaited<ReturnType<typeof chromium.launchPersistentContext>> | undefined;
   let page: Page | undefined;
   let viewerPage: Page | undefined;
 
   try {
+    userDataDir = await mkdtemp(
+      path.join(os.tmpdir(), "odoo-fatturapa-e2e-")
+    );
+    const { port, close } = await startFixtureServer();
+    closeServer = close;
+    const headless = process.env.HEADLESS === "1";
+
+    context = await chromium.launchPersistentContext(userDataDir, {
+      headless,
+      args: [
+        `--disable-extensions-except=${distRoot}`,
+        `--load-extension=${distRoot}`,
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-features=TranslateUI",
+        "--disable-background-networking",
+        "--disable-sync",
+        "--metrics-recording-only",
+        "--disable-component-update",
+        "--disable-default-apps",
+        "--disable-popup-blocking",
+        "--disable-hang-monitor",
+        "--disable-prompt-on-repost",
+        "--disable-ipc-flooding-protection",
+        "--password-store=basic",
+        `--host-resolver-rules=MAP test.odoo.com 127.0.0.1`,
+      ],
+    });
+
     await test.step("open fixture page", async () => {
       page = await context.newPage();
       await page.goto(`http://test.odoo.com:${port}/${options.fixturePath}`, {
@@ -239,9 +243,15 @@ async function runPreviewTest(
     }
   } finally {
     await captureScreenshot(viewerPage || page, options.screenshotName);
-    await context.close();
-    await close();
-    await rm(userDataDir, { recursive: true, force: true });
+    if (context) {
+      await context.close();
+    }
+    if (closeServer) {
+      await closeServer();
+    }
+    if (userDataDir) {
+      await rm(userDataDir, { recursive: true, force: true });
+    }
   }
 }
 
