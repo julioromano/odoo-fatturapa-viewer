@@ -34,8 +34,15 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Run unit tests
-        run: npm run test:unit
+      - name: Run unit tests with coverage
+        run: npm run test:unit:coverage
+
+      - name: Upload unit test coverage report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: vitest-coverage
+          path: artifacts/coverage
 
       - name: Run e2e tests (headed via Xvfb)
         run: xvfb-run -a npx playwright test
