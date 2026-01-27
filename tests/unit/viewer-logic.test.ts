@@ -5,8 +5,8 @@ import { getDownloadState, normalizeSignedFilename } from "../../src/viewer-logi
 describe("viewer logic", () => {
   it("normalizes signed filenames to .xml", () => {
     expect(normalizeSignedFilename("invoice.xml.p7m")).toBe("invoice.xml");
-    expect(normalizeSignedFilename("invoice.p7m")).toBe("invoice.xml");
     expect(normalizeSignedFilename("invoice.XML.P7M")).toBe("invoice.XML");
+    expect(normalizeSignedFilename("invoice.p7m")).toBe("invoice.p7m");
   });
 
   it("enables xml download after successful load", () => {

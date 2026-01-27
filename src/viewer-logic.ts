@@ -8,9 +8,8 @@ export type DownloadState = {
 };
 
 export function normalizeSignedFilename(name: string): string {
-  const base = name.replace(/\.p7m$/i, "");
-  if (/\.xml$/i.test(base)) return base;
-  return `${base}.xml`;
+  if (!isSignedXmlP7m(name)) return name;
+  return name.replace(/\.p7m$/i, "");
 }
 
 export function getDownloadState(input: {
