@@ -9,7 +9,7 @@ export default defineConfig({
       provider: "v8",
       reportsDirectory: "artifacts/coverage",
       reporter: ["text", "html", "lcov"],
-      exclude: ["**/tests/**", "**/dist/**", "**/public/**"],
+      exclude: ["tests/", "dist/", "public/", "*.config.ts"],
     },
   },
 });
