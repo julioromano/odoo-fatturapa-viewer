@@ -1,5 +1,6 @@
 {
   "biome.requireConfiguration": true,
   "editor.defaultFormatter": "biomejs.biome",
-  "prettier.enable": false
+  "prettier.enable": false,
+  "coverage-gutters.coverageFileNames": ["artifacts/coverage/lcov.info"]
 }
