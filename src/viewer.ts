@@ -34,8 +34,7 @@ async function main(): Promise<void> {
     } else {
       if (!originalB64 || !originalFilename) return;
       const bytes = decodeBase64ToBytes(originalB64);
-      const buffer = new ArrayBuffer(bytes.byteLength);
-      new Uint8Array(buffer).set(bytes);
+      const buffer = bytes.buffer as ArrayBuffer;
       blob = new Blob([buffer], { type: "application/pkcs7-mime" });
       downloadName = originalFilename;
     }
