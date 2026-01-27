@@ -37,6 +37,12 @@ jobs:
       - name: Run unit tests with coverage
         run: npm run test:unit:coverage
 
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: artifacts/coverage/lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+
       - name: Upload unit test coverage report
         if: always()
         uses: actions/upload-artifact@v6
