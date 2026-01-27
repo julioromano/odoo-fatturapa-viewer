@@ -14,6 +14,7 @@
     "clean": "rm -rf dist",
     "build": "npm run typecheck && esbuild src/bg.ts src/popup.ts src/intercept.ts src/viewer.ts --bundle --format=esm --platform=browser --outdir=dist && npm run copy:static",
     "build:clean": "npm run clean && npm run build",
+    "test:all": "npm run build:clean && npm run test:unit && npm run test:e2e",
     "test:e2e": "npm run build && playwright test",
     "test:unit": "vitest run",
     "watch": "esbuild src/bg.ts src/popup.ts src/intercept.ts src/viewer.ts --bundle --format=esm --platform=browser --outdir=dist --watch",
