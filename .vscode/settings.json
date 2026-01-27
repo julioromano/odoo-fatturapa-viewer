@@ -1,0 +1,5 @@
+{
+  "biome.requireConfiguration": true,
+  "editor.defaultFormatter": "biomejs.biome",
+  "prettier.enable": false
+}
