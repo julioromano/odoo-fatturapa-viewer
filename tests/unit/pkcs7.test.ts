@@ -9,7 +9,7 @@ const fixturesDir = path.join(process.cwd(), "tests", "fixtures");
 describe("pkcs7 extraction", () => {
   it("extracts embedded XML from .p7m fixture", async () => {
     const p7m = await readFile(path.join(fixturesDir, "test.xml.p7m"));
-    const xml = extractPkcs7Content(new Uint8Array(p7m));
+    const xml = extractPkcs7Content(p7m.toString("base64"));
     expect(xml).toContain("<FatturaElettronicaHeader>");
     expect(xml).toContain("<FatturaElettronicaBody>");
   });

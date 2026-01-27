@@ -14,8 +14,9 @@ function readOctetString(node: forge.asn1.Asn1): string {
   return "";
 }
 
-export function extractPkcs7Content(bytes: Uint8Array): string {
-  const buffer = forge.util.createBuffer(bytes.buffer as ArrayBuffer);
+export function extractPkcs7Content(b64: string): string {
+  const binary = forge.util.decode64(b64);
+  const buffer = forge.util.createBuffer(binary);
   const asn1 = forge.asn1.fromDer(buffer);
   const msg = forge.pkcs7.messageFromAsn1(asn1);
   let raw = "";

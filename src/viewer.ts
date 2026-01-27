@@ -54,17 +54,16 @@ async function main(): Promise<void> {
     if (!data.xml_blob_b64) {
       throw new Error("No XML data found in session storage.");
     }
-    const bin = atob(data.xml_blob_b64);
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
     filename = data.xml_filename || "download.xml";
     if (isSignedFilename(filename)) {
-      xmlContent = extractPkcs7Content(bytes);
+      xmlContent = extractPkcs7Content(data.xml_blob_b64);
       filename = normalizeSignedFilename(filename);
-      if (!xmlContent.includes("<FatturaElettronicaHeader")) {
+      if (!xmlContent.includes("<FatturaElettronicaHeader>")) {
         throw new Error("Signed XML is not a FatturaPA invoice.");
       }
     } else {
+      const bin = atob(data.xml_blob_b64);
+      const bytes = Uint8Array.from(bin, (char) => char.charCodeAt(0));
       xmlContent = new TextDecoder().decode(bytes);
     }
 
