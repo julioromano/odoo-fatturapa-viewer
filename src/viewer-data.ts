@@ -20,10 +20,10 @@ export function assertSignedInvoiceXml(xmlContent: string): void {
   }
 }
 
-export function resolveXmlPayload(input: {
-  b64: string;
+export function resolveXmlPayload(input: { b64: string; filename: string }): {
+  xmlContent: string;
   filename: string;
-}): { xmlContent: string; filename: string } {
+} {
   if (isSignedXmlP7m(input.filename)) {
     const xmlContent = extractPkcs7Content(input.b64);
     assertSignedInvoiceXml(xmlContent);

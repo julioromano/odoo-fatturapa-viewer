@@ -1,7 +1,32 @@
-html, body { margin: 0; font-family: system-ui, sans-serif; }
-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #ddd; }
-h1 { font-size: 16px; margin: 0; }
-.actions { display: flex; gap: 12px; align-items: center; }
-#status { font-size: 12px; color: #666; }
-main { padding: 16px; }
-.error { color: #b00020; white-space: pre-wrap; }
+html,
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+}
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #ddd;
+}
+h1 {
+  font-size: 16px;
+  margin: 0;
+}
+.actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+#status {
+  font-size: 12px;
+  color: #666;
+}
+main {
+  padding: 16px;
+}
+.error {
+  color: #b00020;
+  white-space: pre-wrap;
+}

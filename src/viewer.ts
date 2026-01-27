@@ -1,7 +1,7 @@
 // viewer.ts
 
-import { getDownloadState, type DownloadMode } from "./viewer-logic";
 import { decodeBase64ToBytes, resolveXmlPayload } from "./viewer-data";
+import { type DownloadMode, getDownloadState } from "./viewer-logic";
 
 async function main(): Promise<void> {
   const statusEl = document.getElementById("status") as HTMLElement;
@@ -62,7 +62,7 @@ async function main(): Promise<void> {
     }
 
     // Blob mode
-    const data = await chrome.storage.session.get(["xml_blob_b64", "xml_filename"]) as {
+    const data = (await chrome.storage.session.get(["xml_blob_b64", "xml_filename"])) as {
       xml_blob_b64?: string;
       xml_filename?: string;
     };
@@ -84,7 +84,7 @@ async function main(): Promise<void> {
         originalFilename,
         originalB64,
         hadError: false,
-      })
+      }),
     );
 
     // Render
@@ -94,7 +94,7 @@ async function main(): Promise<void> {
 
     const parseErr = xmlDoc.querySelector("parsererror");
     if (parseErr) {
-      throw new Error("XML Parse Error: " + parseErr.textContent);
+      throw new Error(`XML Parse Error: ${parseErr.textContent}`);
     }
 
     // Load XSLT
@@ -122,7 +122,7 @@ async function main(): Promise<void> {
         originalFilename,
         originalB64,
         hadError: true,
-      })
+      }),
     );
   }
 }

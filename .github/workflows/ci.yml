@@ -28,6 +28,12 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Format check
+        run: npm run format
+
+      - name: Lint
+        run: npm run lint
+
       - name: Run unit tests
         run: npm run test:unit
 
