@@ -82,7 +82,12 @@ async function captureScreenshot(page: Page | undefined, name: string): Promise<
   await page.screenshot({ path: filepath, fullPage: true });
 }
 
-test("intercepts XML download and renders preview", async () => {
+type PreviewOptions = {
+  fixturePath: string;
+  screenshotName: string;
+};
+
+async function runPreviewTest(options: PreviewOptions): Promise<Page> {
   const userDataDir = await mkdtemp(
     path.join(os.tmpdir(), "odoo-fatturapa-e2e-")
   );
@@ -116,7 +121,7 @@ test("intercepts XML download and renders preview", async () => {
 
   try {
     page = await context.newPage();
-    await page.goto(`http://test.odoo.com:${port}/test.html`, {
+    await page.goto(`http://test.odoo.com:${port}/${options.fixturePath}`, {
       waitUntil: "domcontentloaded",
     });
 
@@ -138,86 +143,33 @@ test("intercepts XML download and renders preview", async () => {
       const out = document.getElementById("out");
       return Boolean(status && status.textContent === "" && out?.children.length);
     });
-    await expect(viewerPage.getByText("Prodotto demo")).toBeVisible();
-
-    await captureScreenshot(viewerPage, "preview-success");
+    return viewerPage;
   } catch (error) {
     const targetPage = viewerPage || page;
-    await captureScreenshot(targetPage, "preview-failure");
-    throw error;
-  } finally {
+    await captureScreenshot(targetPage, options.screenshotName);
     await context.close();
     await close();
     await rm(userDataDir, { recursive: true, force: true });
+    throw error;
   }
+
+  throw new Error("Viewer window did not open.");
+}
+
+test("intercepts XML download and renders preview", async () => {
+  const viewerPage = await runPreviewTest({
+    fixturePath: "test.html",
+    screenshotName: "preview",
+  });
+  await expect(viewerPage.getByText("Prodotto demo")).toBeVisible();
+  await captureScreenshot(viewerPage, "preview");
 });
 
 test("intercepts XML.P7M download and renders preview", async () => {
-  const userDataDir = await mkdtemp(
-    path.join(os.tmpdir(), "odoo-fatturapa-e2e-")
-  );
-  const { port, close } = await startFixtureServer();
-  const headless = process.env.HEADLESS === "1";
-
-  const context = await chromium.launchPersistentContext(userDataDir, {
-    headless,
-    args: [
-      `--disable-extensions-except=${distRoot}`,
-      `--load-extension=${distRoot}`,
-      "--no-first-run",
-      "--no-default-browser-check",
-      "--disable-features=TranslateUI",
-      "--disable-background-networking",
-      "--disable-sync",
-      "--metrics-recording-only",
-      "--disable-component-update",
-      "--disable-default-apps",
-      "--disable-popup-blocking",
-      "--disable-hang-monitor",
-      "--disable-prompt-on-repost",
-      "--disable-ipc-flooding-protection",
-      "--password-store=basic",
-      `--host-resolver-rules=MAP test.odoo.com 127.0.0.1`,
-    ],
+  const viewerPage = await runPreviewTest({
+    fixturePath: "test-p7m.html",
+    screenshotName: "preview-p7m",
   });
-
-  let page: Page | undefined;
-  let viewerPage: Page | undefined;
-
-  try {
-    page = await context.newPage();
-    await page.goto(`http://test.odoo.com:${port}/test-p7m.html`, {
-      waitUntil: "domcontentloaded",
-    });
-
-    const viewerPromise = context
-      .waitForEvent("page", {
-        timeout: 20000,
-      })
-      .catch(() => {
-        throw new Error(
-          "Viewer window did not open. Ensure extensions are enabled; headless mode often blocks extension loading."
-        );
-      });
-    await page.click("#download");
-
-    viewerPage = await viewerPromise;
-    await viewerPage.waitForURL(/viewer\.html/);
-    await viewerPage.waitForFunction(() => {
-      const status = document.getElementById("status");
-      const out = document.getElementById("out");
-      return Boolean(status && status.textContent === "" && out?.children.length);
-    });
-    await expect(viewerPage.getByText("Prodotto demo")).toBeVisible();
-
-    await captureScreenshot(viewerPage, "preview-p7m-success");
-  } catch (error) {
-    const targetPage = viewerPage || page;
-    await captureScreenshot(targetPage, "preview-p7m-failure");
-    throw error;
-  } finally {
-    await context.close();
-    await close();
-    await rm(userDataDir, { recursive: true, force: true });
-  }
+  await expect(viewerPage.getByText("Prodotto demo")).toBeVisible();
+  await captureScreenshot(viewerPage, "preview-p7m");
 });

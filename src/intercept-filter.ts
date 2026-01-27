@@ -1,3 +1,5 @@
+import { isSignedXmlP7m } from "./filename";
+
 const ALLOWED_MIME_TYPES = new Set([
   "application/xml",
   "application/pkcs7-mime",
@@ -14,7 +16,7 @@ export function isAllowedExtension(filename: string): boolean {
 }
 
 export function requiresHeaderSniff(filename: string): boolean {
-  return /\.xml$/i.test(filename) && !/\.xml\.p7m$/i.test(filename);
+  return /\.xml$/i.test(filename) && !isSignedXmlP7m(filename);
 }
 
 export function containsFatturaHeader(xmlText: string): boolean {

@@ -1,5 +1,6 @@
 // viewer.ts
 
+import { isSignedXmlP7m } from "./filename";
 import { extractPkcs7Content } from "./pkcs7";
 
 async function main(): Promise<void> {
@@ -9,10 +10,6 @@ async function main(): Promise<void> {
 
   let xmlContent: string | null = null;
   let filename = "download.xml";
-
-  function isSignedFilename(name: string): boolean {
-    return /\.p7m$/i.test(name);
-  }
 
   function normalizeSignedFilename(name: string): string {
     const base = name.replace(/\.p7m$/i, "");
@@ -55,10 +52,10 @@ async function main(): Promise<void> {
       throw new Error("No XML data found in session storage.");
     }
     filename = data.xml_filename || "download.xml";
-    if (isSignedFilename(filename)) {
+    if (isSignedXmlP7m(filename)) {
       xmlContent = extractPkcs7Content(data.xml_blob_b64);
       filename = normalizeSignedFilename(filename);
-      if (!xmlContent.includes("<FatturaElettronicaHeader>")) {
+      if (!xmlContent.includes("<FatturaElettronicaHeader")) {
         throw new Error("Signed XML is not a FatturaPA invoice.");
       }
     } else {
