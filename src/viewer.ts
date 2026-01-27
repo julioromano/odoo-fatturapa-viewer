@@ -11,7 +11,7 @@ async function main(): Promise<void> {
 
   let xmlContent: string | null = null;
   let filename = "download.xml";
-  let downloadMode: "xml" | "p7m" | null = null;
+  let downloadMode: DownloadMode | null = null;
   let originalB64: string | null = null;
   let originalFilename: string | null = null;
 
