@@ -5,21 +5,17 @@ function readOctetString(node: forge.asn1.Asn1): string {
     return node.value;
   }
   if (node.constructed && Array.isArray(node.value)) {
-    let out = "";
+    const parts: string[] = [];
     for (const part of node.value as forge.asn1.Asn1[]) {
-      out += readOctetString(part);
+      parts.push(readOctetString(part));
     }
-    return out;
+    return parts.join("");
   }
   return "";
 }
 
 export function extractPkcs7Content(bytes: Uint8Array): string {
-  const rawBytes = bytes.reduce(
-    (acc, value) => acc + String.fromCharCode(value),
-    ""
-  );
-  const buffer = forge.util.createBuffer(rawBytes);
+  const buffer = forge.util.createBuffer(bytes.buffer as ArrayBuffer);
   const asn1 = forge.asn1.fromDer(buffer);
   const msg = forge.pkcs7.messageFromAsn1(asn1);
   let raw = "";
