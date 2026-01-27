@@ -1,5 +1,3 @@
-import { isSignedXmlP7m } from "./filename";
-
 const ALLOWED_MIME_TYPES = new Set([
   "application/xml",
   "application/pkcs7-mime",

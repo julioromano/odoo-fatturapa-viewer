@@ -1,7 +1,8 @@
 // viewer.ts
 
 import { isSignedXmlP7m } from "./filename";
-import { extractPkcs7Content } from "./pkcs7";
+import { getDownloadState, type DownloadMode } from "./viewer-logic";
+import { decodeBase64ToBytes, resolveXmlPayload } from "./viewer-data";
 
 async function main(): Promise<void> {
   const statusEl = document.getElementById("status") as HTMLElement;
@@ -10,21 +11,38 @@ async function main(): Promise<void> {
 
   let xmlContent: string | null = null;
   let filename = "download.xml";
-
-  function normalizeSignedFilename(name: string): string {
-    const base = name.replace(/\.p7m$/i, "");
-    if (/\.xml$/i.test(base)) return base;
-    return `${base}.xml`;
-  }
+  let downloadMode: "xml" | "p7m" | null = null;
+  let originalB64: string | null = null;
+  let originalFilename: string | null = null;
 
   // Helper to trigger download
+  function applyDownloadState(state: { mode: DownloadMode; label: string | null }): void {
+    downloadMode = state.mode;
+    if (downloadBtn) {
+      downloadBtn.disabled = !downloadMode;
+      if (state.label) downloadBtn.textContent = state.label;
+    }
+  }
+
   function triggerDownload(): void {
-    if (!xmlContent) return;
-    const blob = new Blob([xmlContent], { type: "application/xml" });
+    if (!downloadMode) return;
+    let blob: Blob;
+    let downloadName = filename;
+    if (downloadMode === "xml") {
+      if (!xmlContent) return;
+      blob = new Blob([xmlContent], { type: "application/xml" });
+    } else {
+      if (!originalB64 || !originalFilename) return;
+      const bytes = decodeBase64ToBytes(originalB64);
+      const buffer = new ArrayBuffer(bytes.byteLength);
+      new Uint8Array(buffer).set(bytes);
+      blob = new Blob([buffer], { type: "application/pkcs7-mime" });
+      downloadName = originalFilename;
+    }
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = filename;
+    a.download = downloadName;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -34,6 +52,7 @@ async function main(): Promise<void> {
   }
 
   if (downloadBtn) {
+    downloadBtn.disabled = true;
     downloadBtn.addEventListener("click", triggerDownload);
   }
 
@@ -52,17 +71,22 @@ async function main(): Promise<void> {
       throw new Error("No XML data found in session storage.");
     }
     filename = data.xml_filename || "download.xml";
-    if (isSignedXmlP7m(filename)) {
-      xmlContent = extractPkcs7Content(data.xml_blob_b64);
-      filename = normalizeSignedFilename(filename);
-      if (!xmlContent.includes("<FatturaElettronicaHeader")) {
-        throw new Error("Signed XML is not a FatturaPA invoice.");
-      }
-    } else {
-      const bin = atob(data.xml_blob_b64);
-      const bytes = Uint8Array.from(bin, (char) => char.charCodeAt(0));
-      xmlContent = new TextDecoder().decode(bytes);
-    }
+    originalFilename = filename;
+    originalB64 = data.xml_blob_b64;
+    const resolved = resolveXmlPayload({
+      b64: data.xml_blob_b64,
+      filename,
+    });
+    xmlContent = resolved.xmlContent;
+    filename = resolved.filename;
+    applyDownloadState(
+      getDownloadState({
+        xmlContent,
+        originalFilename,
+        originalB64,
+        hadError: false,
+      })
+    );
 
     // Render
     statusEl.textContent = "Rendering...";
@@ -93,6 +117,14 @@ async function main(): Promise<void> {
     const message = e instanceof Error ? e.message : String(e);
     statusEl.textContent = `Error: ${message}`;
     statusEl.style.color = "red";
+    applyDownloadState(
+      getDownloadState({
+        xmlContent,
+        originalFilename,
+        originalB64,
+        hadError: true,
+      })
+    );
   }
 }
 

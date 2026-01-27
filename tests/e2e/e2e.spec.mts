@@ -36,8 +36,10 @@ type FixtureServer = {
 async function startFixtureServer(): Promise<FixtureServer> {
   const html = await readFile(path.join(fixturesDir, "test.html"));
   const htmlP7m = await readFile(path.join(fixturesDir, "test-p7m.html"));
+  const htmlBadP7m = await readFile(path.join(fixturesDir, "test-bad-p7m.html"));
   const xml = await readFile(path.join(fixturesDir, "test.xml"));
   const xmlP7m = await readFile(path.join(fixturesDir, "test.xml.p7m"));
+  const xmlBadP7m = await readFile(path.join(fixturesDir, "test-bad.xml.p7m"));
 
   const server = createServer((req, res) => {
     if (!req.url || req.url === "/" || req.url === "/test.html") {
@@ -50,6 +52,11 @@ async function startFixtureServer(): Promise<FixtureServer> {
       res.end(htmlP7m);
       return;
     }
+    if (req.url === "/test-bad-p7m.html") {
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.end(htmlBadP7m);
+      return;
+    }
     if (req.url === "/test.xml") {
       res.writeHead(200, { "Content-Type": "application/xml; charset=utf-8" });
       res.end(xml);
@@ -58,6 +65,11 @@ async function startFixtureServer(): Promise<FixtureServer> {
     if (req.url === "/test.xml.p7m") {
       res.writeHead(200, { "Content-Type": "application/pkcs7-mime" });
       res.end(xmlP7m);
+      return;
+    }
+    if (req.url === "/test-bad.xml.p7m") {
+      res.writeHead(200, { "Content-Type": "application/pkcs7-mime" });
+      res.end(xmlBadP7m);
       return;
     }
     res.writeHead(404);
@@ -100,6 +112,7 @@ async function captureScreenshot(page: Page | undefined, name: string): Promise<
 type PreviewOptions = {
   fixturePath: string;
   screenshotName: string;
+  waitFor?: "success" | "error";
 };
 
 /**
@@ -171,11 +184,19 @@ async function runPreviewTest(
 
     viewerPage = await viewerPromise;
     await viewerPage.waitForURL(/viewer\.html/);
-    await viewerPage.waitForFunction(() => {
-      const status = document.getElementById("status");
-      const out = document.getElementById("out");
-      return Boolean(status && status.textContent === "" && out?.children.length);
-    });
+    const waitFor = options.waitFor ?? "success";
+    if (waitFor === "success") {
+      await viewerPage.waitForFunction(() => {
+        const status = document.getElementById("status");
+        const out = document.getElementById("out");
+        return Boolean(status && status.textContent === "" && out?.children.length);
+      });
+    } else {
+      await viewerPage.waitForFunction(() => {
+        const status = document.getElementById("status");
+        return Boolean(status && status.textContent?.startsWith("Error:"));
+      });
+    }
     await run(viewerPage);
   } catch (err) {
     const details = err instanceof Error ? err.message : String(err);
@@ -208,6 +229,24 @@ test("intercepts XML.P7M download and renders preview", async () => {
     },
     async (viewerPage) => {
       await expect(viewerPage.getByText("Prodotto demo")).toBeVisible();
+    }
+  );
+});
+
+test("offers fallback download when XML.P7M extraction fails", async () => {
+  await runPreviewTest(
+    {
+      fixturePath: "test-bad-p7m.html",
+      screenshotName: "preview-p7m-error",
+      waitFor: "error",
+    },
+    async (viewerPage) => {
+      await expect(viewerPage.getByText(/^Error:/)).toBeVisible();
+      const downloadButton = viewerPage.getByRole("button", {
+        name: "Download original .p7m",
+      });
+      await expect(downloadButton).toBeEnabled();
+      await expect(viewerPage.locator("#out")).toBeEmpty();
     }
   );
 });
