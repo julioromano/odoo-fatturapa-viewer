@@ -4,5 +4,6 @@ export default defineConfig({
   test: {
     include: ["tests/unit/**/*.test.ts"],
     exclude: ["tests/e2e.spec.mjs"],
+    reporters: ["default", "github-actions"],
   },
 });
