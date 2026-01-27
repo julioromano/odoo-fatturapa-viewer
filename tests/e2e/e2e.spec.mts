@@ -1,3 +1,18 @@
+/**
+ * End-to-end tests for the Odoo FatturaPA Viewer extension.
+ * 
+ * Tests the extension's ability to intercept XML and P7M (PKCS#7 signed) file downloads
+ * and render previews in a viewer window.
+ * 
+ * @remarks
+ * - Uses Playwright to launch a persistent Chrome context with the extension loaded
+ * - Sets up a local fixture server to serve test HTML and XML files
+ * - Verifies that clicking the download button opens the viewer with correct content
+ * - Captures screenshots for both regular XML and signed P7M files
+ * 
+ * @see {@link runPreviewTest} for the main test execution flow
+ * @see {@link startFixtureServer} for fixture server setup
+ */
 import { chromium, expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { createServer } from "node:http";
@@ -87,7 +102,25 @@ type PreviewOptions = {
   screenshotName: string;
 };
 
-async function runPreviewTest(options: PreviewOptions): Promise<Page> {
+/**
+ * Executes an end-to-end preview test by launching a persistent browser context with the extension loaded.
+ * 
+ * This function sets up an isolated browser environment to test the extension's viewer functionality in a
+ * controlled manner. It manages the complete lifecycle of the test including server startup, browser context
+ * creation, extension loading, and cleanup to ensure tests are reproducible and don't leave artifacts behind.
+ * 
+ * The persistent context approach allows the extension to maintain state across pages, simulating real user
+ * behavior where the extension remains active throughout the browser session. Temporary directories and processes
+ * are explicitly managed and cleaned up to prevent resource leaks and ensure test isolation.
+ * 
+ * @param options - Configuration for the preview test, including fixture path and screenshot name
+ * @param run - Callback function executed once the viewer page has fully loaded and rendered content
+ * @throws {Error} When the viewer window fails to open, the extension isn't properly loaded, or the test callback throws
+ */
+async function runPreviewTest(
+  options: PreviewOptions,
+  run: (viewerPage: Page) => Promise<void>
+): Promise<void> {
   const userDataDir = await mkdtemp(
     path.join(os.tmpdir(), "odoo-fatturapa-e2e-")
   );
@@ -143,33 +176,38 @@ async function runPreviewTest(options: PreviewOptions): Promise<Page> {
       const out = document.getElementById("out");
       return Boolean(status && status.textContent === "" && out?.children.length);
     });
-    return viewerPage;
-  } catch (error) {
-    const targetPage = viewerPage || page;
-    await captureScreenshot(targetPage, options.screenshotName);
+    await run(viewerPage);
+  } catch (err) {
+    const details = err instanceof Error ? err.message : String(err);
+    throw new Error(`Preview flow failed for ${options.fixturePath}: ${details}`);
+  } finally {
+    await captureScreenshot(viewerPage || page, options.screenshotName);
     await context.close();
     await close();
     await rm(userDataDir, { recursive: true, force: true });
-    throw error;
   }
-
-  throw new Error("Viewer window did not open.");
 }
 
 test("intercepts XML download and renders preview", async () => {
-  const viewerPage = await runPreviewTest({
-    fixturePath: "test.html",
-    screenshotName: "preview",
-  });
-  await expect(viewerPage.getByText("Prodotto demo")).toBeVisible();
-  await captureScreenshot(viewerPage, "preview");
+  await runPreviewTest(
+    {
+      fixturePath: "test.html",
+      screenshotName: "preview",
+    },
+    async (viewerPage) => {
+      await expect(viewerPage.getByText("Prodotto demo")).toBeVisible();
+    }
+  );
 });
 
 test("intercepts XML.P7M download and renders preview", async () => {
-  const viewerPage = await runPreviewTest({
-    fixturePath: "test-p7m.html",
-    screenshotName: "preview-p7m",
-  });
-  await expect(viewerPage.getByText("Prodotto demo")).toBeVisible();
-  await captureScreenshot(viewerPage, "preview-p7m");
+  await runPreviewTest(
+    {
+      fixturePath: "test-p7m.html",
+      screenshotName: "preview-p7m",
+    },
+    async (viewerPage) => {
+      await expect(viewerPage.getByText("Prodotto demo")).toBeVisible();
+    }
+  );
 });
