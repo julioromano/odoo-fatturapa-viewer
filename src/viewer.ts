@@ -1,21 +1,47 @@
 // viewer.ts
 
+import { getDownloadState, type DownloadMode } from "./viewer-logic";
+import { decodeBase64ToBytes, resolveXmlPayload } from "./viewer-data";
+
 async function main(): Promise<void> {
   const statusEl = document.getElementById("status") as HTMLElement;
   const outEl = document.getElementById("out") as HTMLElement;
   const downloadBtn = document.getElementById("downloadBtn") as HTMLButtonElement | null;
+  const defaultDownloadLabel = downloadBtn?.textContent || "Download";
 
   let xmlContent: string | null = null;
   let filename = "download.xml";
+  let downloadMode: DownloadMode | null = null;
+  let originalB64: string | null = null;
+  let originalFilename: string | null = null;
 
   // Helper to trigger download
+  function applyDownloadState(state: { mode: DownloadMode; label: string | null }): void {
+    downloadMode = state.mode;
+    if (downloadBtn) {
+      downloadBtn.disabled = !downloadMode;
+      downloadBtn.textContent = state.label ?? defaultDownloadLabel;
+    }
+  }
+
   function triggerDownload(): void {
-    if (!xmlContent) return;
-    const blob = new Blob([xmlContent], { type: "application/xml" });
+    if (!downloadMode) return;
+    let blob: Blob;
+    let downloadName = filename;
+    if (downloadMode === "xml") {
+      if (!xmlContent) return;
+      blob = new Blob([xmlContent], { type: "application/xml" });
+    } else {
+      if (!originalB64 || !originalFilename) return;
+      const bytes = decodeBase64ToBytes(originalB64);
+      const buffer = bytes.buffer as ArrayBuffer;
+      blob = new Blob([buffer], { type: "application/pkcs7-mime" });
+      downloadName = originalFilename;
+    }
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = filename;
+    a.download = downloadName;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -25,6 +51,7 @@ async function main(): Promise<void> {
   }
 
   if (downloadBtn) {
+    downloadBtn.disabled = true;
     downloadBtn.addEventListener("click", triggerDownload);
   }
 
@@ -42,11 +69,23 @@ async function main(): Promise<void> {
     if (!data.xml_blob_b64) {
       throw new Error("No XML data found in session storage.");
     }
-    const bin = atob(data.xml_blob_b64);
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    xmlContent = new TextDecoder().decode(bytes);
     filename = data.xml_filename || "download.xml";
+    originalFilename = filename;
+    originalB64 = data.xml_blob_b64;
+    const resolved = resolveXmlPayload({
+      b64: data.xml_blob_b64,
+      filename,
+    });
+    xmlContent = resolved.xmlContent;
+    filename = resolved.filename;
+    applyDownloadState(
+      getDownloadState({
+        xmlContent,
+        originalFilename,
+        originalB64,
+        hadError: false,
+      })
+    );
 
     // Render
     statusEl.textContent = "Rendering...";
@@ -77,6 +116,14 @@ async function main(): Promise<void> {
     const message = e instanceof Error ? e.message : String(e);
     statusEl.textContent = `Error: ${message}`;
     statusEl.style.color = "red";
+    applyDownloadState(
+      getDownloadState({
+        xmlContent,
+        originalFilename,
+        originalB64,
+        hadError: true,
+      })
+    );
   }
 }
 

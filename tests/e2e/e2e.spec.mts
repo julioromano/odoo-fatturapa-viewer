@@ -1,3 +1,18 @@
+/**
+ * End-to-end tests for the Odoo FatturaPA Viewer extension.
+ * 
+ * Tests the extension's ability to intercept XML and P7M (PKCS#7 signed) file downloads
+ * and render previews in a viewer window.
+ * 
+ * @remarks
+ * - Uses Playwright to launch a persistent Chrome context with the extension loaded
+ * - Sets up a local fixture server to serve test HTML and XML files
+ * - Verifies that clicking the download button opens the viewer with correct content
+ * - Captures screenshots for both regular XML and signed P7M files
+ * 
+ * @see {@link runPreviewTest} for the main test execution flow
+ * @see {@link startFixtureServer} for fixture server setup
+ */
 import { chromium, expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { createServer } from "node:http";
@@ -20,7 +35,13 @@ type FixtureServer = {
 
 async function startFixtureServer(): Promise<FixtureServer> {
   const html = await readFile(path.join(fixturesDir, "test.html"));
+  const htmlBad = await readFile(path.join(fixturesDir, "test-bad.html"));
+  const htmlP7m = await readFile(path.join(fixturesDir, "test-p7m.html"));
+  const htmlBadP7m = await readFile(path.join(fixturesDir, "test-bad-p7m.html"));
   const xml = await readFile(path.join(fixturesDir, "test.xml"));
+  const xmlBad = await readFile(path.join(fixturesDir, "test-bad.xml"));
+  const xmlP7m = await readFile(path.join(fixturesDir, "test.xml.p7m"));
+  const xmlBadP7m = await readFile(path.join(fixturesDir, "test-bad.xml.p7m"));
 
   const server = createServer((req, res) => {
     if (!req.url || req.url === "/" || req.url === "/test.html") {
@@ -28,9 +49,39 @@ async function startFixtureServer(): Promise<FixtureServer> {
       res.end(html);
       return;
     }
+    if (req.url === "/test-bad.html") {
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.end(htmlBad);
+      return;
+    }
+    if (req.url === "/test-p7m.html") {
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.end(htmlP7m);
+      return;
+    }
+    if (req.url === "/test-bad-p7m.html") {
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.end(htmlBadP7m);
+      return;
+    }
     if (req.url === "/test.xml") {
       res.writeHead(200, { "Content-Type": "application/xml; charset=utf-8" });
       res.end(xml);
+      return;
+    }
+    if (req.url === "/test-bad.xml") {
+      res.writeHead(200, { "Content-Type": "application/xml; charset=utf-8" });
+      res.end(xmlBad);
+      return;
+    }
+    if (req.url === "/test.xml.p7m") {
+      res.writeHead(200, { "Content-Type": "application/pkcs7-mime" });
+      res.end(xmlP7m);
+      return;
+    }
+    if (req.url === "/test-bad.xml.p7m") {
+      res.writeHead(200, { "Content-Type": "application/pkcs7-mime" });
+      res.end(xmlBadP7m);
       return;
     }
     res.writeHead(404);
@@ -70,42 +121,72 @@ async function captureScreenshot(page: Page | undefined, name: string): Promise<
   await page.screenshot({ path: filepath, fullPage: true });
 }
 
-test("intercepts XML download and renders preview", async () => {
-  const userDataDir = await mkdtemp(
-    path.join(os.tmpdir(), "odoo-fatturapa-e2e-")
-  );
-  const { port, close } = await startFixtureServer();
-  const headless = process.env.HEADLESS === "1";
+type PreviewOptions = {
+  fixturePath: string;
+  screenshotName: string;
+  waitFor?: "success" | "error";
+};
 
-  const context = await chromium.launchPersistentContext(userDataDir, {
-    headless,
-    args: [
-      `--disable-extensions-except=${distRoot}`,
-      `--load-extension=${distRoot}`,
-      "--no-first-run",
-      "--no-default-browser-check",
-      "--disable-features=TranslateUI",
-      "--disable-background-networking",
-      "--disable-sync",
-      "--metrics-recording-only",
-      "--disable-component-update",
-      "--disable-default-apps",
-      "--disable-popup-blocking",
-      "--disable-hang-monitor",
-      "--disable-prompt-on-repost",
-      "--disable-ipc-flooding-protection",
-      "--password-store=basic",
-      `--host-resolver-rules=MAP test.odoo.com 127.0.0.1`,
-    ],
-  });
-
+/**
+ * Executes an end-to-end preview test by launching a persistent browser context with the extension loaded.
+ * 
+ * This function sets up an isolated browser environment to test the extension's viewer functionality in a
+ * controlled manner. It manages the complete lifecycle of the test including server startup, browser context
+ * creation, extension loading, and cleanup to ensure tests are reproducible and don't leave artifacts behind.
+ * 
+ * The persistent context approach allows the extension to maintain state across pages, simulating real user
+ * behavior where the extension remains active throughout the browser session. Temporary directories and processes
+ * are explicitly managed and cleaned up to prevent resource leaks and ensure test isolation.
+ * 
+ * @param options - Configuration for the preview test, including fixture path and screenshot name
+ * @param run - Callback function executed once the viewer page has fully loaded and rendered content
+ * @throws {Error} When the viewer window fails to open, the extension isn't properly loaded, or the test callback throws
+ */
+async function runPreviewTest(
+  options: PreviewOptions,
+  run: (viewerPage: Page) => Promise<void>
+): Promise<void> {
+  let userDataDir: string | undefined;
+  let closeServer: (() => Promise<void>) | undefined;
+  let context: Awaited<ReturnType<typeof chromium.launchPersistentContext>> | undefined;
   let page: Page | undefined;
   let viewerPage: Page | undefined;
 
   try {
-    page = await context.newPage();
-    await page.goto(`http://test.odoo.com:${port}/test.html`, {
-      waitUntil: "domcontentloaded",
+    userDataDir = await mkdtemp(
+      path.join(os.tmpdir(), "odoo-fatturapa-e2e-")
+    );
+    const { port, close } = await startFixtureServer();
+    closeServer = close;
+    const headless = process.env.HEADLESS === "1";
+
+    context = await chromium.launchPersistentContext(userDataDir, {
+      headless,
+      args: [
+        `--disable-extensions-except=${distRoot}`,
+        `--load-extension=${distRoot}`,
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-features=TranslateUI",
+        "--disable-background-networking",
+        "--disable-sync",
+        "--metrics-recording-only",
+        "--disable-component-update",
+        "--disable-default-apps",
+        "--disable-popup-blocking",
+        "--disable-hang-monitor",
+        "--disable-prompt-on-repost",
+        "--disable-ipc-flooding-protection",
+        "--password-store=basic",
+        `--host-resolver-rules=MAP test.odoo.com 127.0.0.1`,
+      ],
+    });
+
+    await test.step("open fixture page", async () => {
+      page = await context.newPage();
+      await page.goto(`http://test.odoo.com:${port}/${options.fixturePath}`, {
+        waitUntil: "domcontentloaded",
+      });
     });
 
     const viewerPromise = context
@@ -117,25 +198,119 @@ test("intercepts XML download and renders preview", async () => {
           "Viewer window did not open. Ensure extensions are enabled; headless mode often blocks extension loading."
         );
       });
-    await page.click("#download");
 
-    viewerPage = await viewerPromise;
-    await viewerPage.waitForURL(/viewer\.html/);
-    await viewerPage.waitForFunction(() => {
-      const status = document.getElementById("status");
-      const out = document.getElementById("out");
-      return Boolean(status && status.textContent === "" && out?.children.length);
+    await test.step("click download button", async () => {
+      await page?.click("#download");
     });
-    await expect(viewerPage.getByText("Prodotto demo")).toBeVisible();
 
-    await captureScreenshot(viewerPage, "preview-success");
-  } catch (error) {
-    const targetPage = viewerPage || page;
-    await captureScreenshot(targetPage, "preview-failure");
-    throw error;
+    await test.step("wait for viewer window", async () => {
+      viewerPage = await viewerPromise;
+      await viewerPage.waitForURL(/viewer\.html/);
+    });
+
+    await test.step("wait for render", async () => {
+      const waitFor = options.waitFor ?? "success";
+      if (waitFor === "success") {
+        await viewerPage?.waitForFunction(() => {
+          const status = document.getElementById("status");
+          const out = document.getElementById("out");
+          return Boolean(status && status.textContent === "" && out?.children.length);
+        });
+      } else {
+        await viewerPage?.waitForFunction(() => {
+          const status = document.getElementById("status");
+          return Boolean(status && status.textContent?.startsWith("Error:"));
+        });
+      }
+    });
+
+    await test.step("assert viewer content", async () => {
+      if (!viewerPage) {
+        throw new Error("Viewer page was not created.");
+      }
+      await run(viewerPage);
+    });
+  } catch (err) {
+    if (err instanceof Error) {
+      err.message = `Preview flow failed for ${options.fixturePath}: ${err.message}`;
+      throw err;
+    } else {
+      const error = new Error(
+        `Preview flow failed for ${options.fixturePath}: ${String(err)}`,
+        {cause: err},
+      );
+      throw error;
+    }
   } finally {
-    await context.close();
-    await close();
-    await rm(userDataDir, { recursive: true, force: true });
+    await captureScreenshot(viewerPage || page, options.screenshotName);
+    if (context) {
+      await context.close();
+    }
+    if (closeServer) {
+      await closeServer();
+    }
+    if (userDataDir) {
+      await rm(userDataDir, { recursive: true, force: true });
+    }
   }
+}
+
+test("intercepts XML download and renders preview", async () => {
+  await runPreviewTest(
+    {
+      fixturePath: "test.html",
+      screenshotName: "preview",
+    },
+    async (viewerPage) => {
+      await expect(viewerPage.getByText("Prodotto demo")).toBeVisible();
+    }
+  );
+});
+
+test("intercepts XML.P7M download and renders preview", async () => {
+  await runPreviewTest(
+    {
+      fixturePath: "test-p7m.html",
+      screenshotName: "preview-p7m",
+    },
+    async (viewerPage) => {
+      await expect(viewerPage.getByText("Prodotto demo")).toBeVisible();
+    }
+  );
+});
+
+test("offers fallback download when XML.P7M extraction fails", async () => {
+  await runPreviewTest(
+    {
+      fixturePath: "test-bad-p7m.html",
+      screenshotName: "preview-p7m-error",
+      waitFor: "error",
+    },
+    async (viewerPage) => {
+      await expect(viewerPage.getByText(/^Error:/)).toBeVisible();
+      const downloadButton = viewerPage.getByRole("button", {
+        name: "Download original .p7m",
+      });
+      await expect(downloadButton).toBeEnabled();
+      await expect(viewerPage.locator("#out")).toBeEmpty();
+    }
+  );
+});
+
+test("disables download and resets label when XML rendering fails", async () => {
+  await runPreviewTest(
+    {
+      fixturePath: "test-bad.html",
+      screenshotName: "preview-xml-error",
+      waitFor: "error",
+    },
+    async (viewerPage) => {
+      await expect(viewerPage.getByText(/^Error:/)).toBeVisible();
+      const downloadButton = viewerPage.getByRole("button", {
+        name: "Download anyway",
+      });
+      await expect(downloadButton).toBeDisabled();
+      await expect(viewerPage.locator("#out")).toBeEmpty();
+    }
+  );
 });
