@@ -4,5 +4,9 @@ export default defineConfig({
   testDir: "tests/e2e",
   timeout: 60000,
   outputDir: "artifacts/test-results",
-  reporter: [["dot"], ["github"]],
+  reporter: [
+    ["dot"],
+    ["github"],
+    ["html", { outputFolder: "artifacts/playwright-report", open: "never" }],
+  ],
 });
