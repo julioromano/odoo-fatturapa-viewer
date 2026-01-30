@@ -17,13 +17,13 @@ describe("intercept filter", () => {
     expect(isAllowedMime("application/xml")).toBe(true);
     expect(isAllowedMime("application/pkcs7-mime")).toBe(true);
     expect(isAllowedMime("application/octet-stream")).toBe(true);
+    expect(isAllowedMime("text/xml")).toBe(true);
   });
 
   it("rejects unrelated mime types", () => {
     expect(isAllowedMime("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")).toBe(
       false,
     );
-    expect(isAllowedMime("text/xml")).toBe(false);
     expect(isAllowedMime("")).toBe(false);
   });
 

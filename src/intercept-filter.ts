@@ -2,6 +2,7 @@ const ALLOWED_MIME_TYPES = new Set([
   "application/xml",
   "application/pkcs7-mime",
   "application/octet-stream", // Odoo bug: recent incoming invoices from other Odoo instances use this.
+  "text/xml", // Manual invoice uploads can be served as text/xml instead of application/xml.
 ]);
 
 export function isAllowedMime(mime: string): boolean {
