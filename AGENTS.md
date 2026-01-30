@@ -50,3 +50,4 @@ This repository is a Chrome extension that previews FatturaPA XML files from Odo
 - Be mindful of `manifest.json` permissions; only add new ones if required.
 - Avoid logging sensitive XML data to the console in production changes.
 - When adding new packages to `package.json`, use the latest available version.
+- Any new GitHub Action added to a workflow must use its latest available version.
