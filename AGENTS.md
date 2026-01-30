@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 This repository is a Chrome extension that previews FatturaPA XML files from Odoo.
-- `manifest.json` defines extension metadata, permissions, and entry points.
+- `manifest.template.json` defines extension metadata, permissions, and entry points for build-time generation.
 - `src/` contains TypeScript sources (background, popup, content, intercept, viewer, allowlist).
 - `public/` contains static assets (`viewer.html`, `viewer.css`, `popup.html`, `popup.css`, XSLT, icons).
 - `tests/` holds Playwright E2E coverage and fixtures.
@@ -10,7 +10,7 @@ This repository is a Chrome extension that previews FatturaPA XML files from Odo
 - `artifacts/` stores Playwright HTML reports and screenshots.
 
 ## Build, Test, and Development Commands
-- TypeScript build: `npm run build` (runs typecheck, bundles to `dist/`, and copies static files plus `manifest.json`).
+- TypeScript build: `npm run build` (runs typecheck, bundles to `dist/`, and copies static files plus a generated `manifest.json`).
 - Clean build output: `npm run clean` (or `npm run build:clean`).
 - Type check: `npm run typecheck`.
 - Format: `npm run format` (Biome).
@@ -43,11 +43,11 @@ This repository is a Chrome extension that previews FatturaPA XML files from Odo
 
 ## Release Checklist
 - Verify the extension loads cleanly in Chrome and the preview renders for a known XML.
-- Confirm `manifest.json` version changes if you are publishing a new build.
-- Re-check permissions in `manifest.json` match the release scope.
+- Confirm the release tag version matches the generated `manifest.json` version.
+- Re-check permissions in `manifest.template.json` match the release scope.
 
 ## Security & Configuration Notes
-- Be mindful of `manifest.json` permissions; only add new ones if required.
+- Be mindful of `manifest.template.json` permissions; only add new ones if required.
 - Avoid logging sensitive XML data to the console in production changes.
 - When adding new packages to `package.json`, use the latest available version.
 - Any new GitHub Action added to a workflow must use its latest available version.

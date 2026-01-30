@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Odoo FatturaPa Viewer",
-  "version": "2.1.0",
+  "version": "__VERSION__",
   "description": "Allows to quickly preview any FatturaPa XML file attached to an invoice or vendor bill.",
   "icons": {
     "16": "icon/icon-16.png",
