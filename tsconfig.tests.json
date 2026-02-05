@@ -5,12 +5,12 @@
     "moduleResolution": "node",
     "noEmit": true,
     "lib": ["ES2020"],
-    "rootDir": "scripts",
+    "rootDir": ".",
     "strict": true,
     "noEmitOnError": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": ["node", "vitest/globals"]
   },
-  "include": ["scripts/**/*.ts"]
+  "include": ["tests/**/*.ts"]
 }

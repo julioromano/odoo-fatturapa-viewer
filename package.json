@@ -30,7 +30,7 @@
     "test:unit:coverage": "vitest run --coverage",
     "watch": "esbuild src/bg.ts src/popup.ts src/intercept.ts src/viewer.ts --bundle --format=esm --platform=browser --outdir=dist --watch",
     "copy:static": "cp -R public/. dist/ && node scripts/generate-manifest.ts",
-    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.scripts.json"
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.scripts.json && tsc -p tsconfig.tests.json"
   },
   "dependencies": {
     "node-forge": "^1.3.3"

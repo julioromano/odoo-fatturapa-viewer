@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
+import * as os from "node:os";
+import * as path from "node:path";
 import { describe, expect, it } from "vitest";
 
 const scriptPath = path.resolve(process.cwd(), "scripts", "generate-manifest.ts");
