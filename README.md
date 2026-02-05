@@ -6,6 +6,7 @@ TypeScript sources live in `src/` and compile into `dist/`.
 Static extension assets live in `public/` and are copied into `dist/` on build.
 `manifest.template.json` is used to generate `dist/manifest.json` as part of the build.
 Load the extension from `dist/`, so rebuild after changes.
+`package.json` uses a `0.0.0-dev` placeholder; release builds take the version from git tags.
 
 Build once:
 ```

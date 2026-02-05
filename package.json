@@ -1,6 +1,6 @@
 {
   "name": "odoo-fatturapa-viewer",
-  "version": "0.0.0",
+  "version": "0.0.0-dev",
   "private": true,
   "devDependencies": {
     "@biomejs/biome": "^2.3.14",
