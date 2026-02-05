@@ -3,10 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "devDependencies": {
-    "@biomejs/biome": "^2.3.13",
-    "@playwright/test": "^1.58.0",
+    "@biomejs/biome": "^2.3.14",
+    "@playwright/test": "^1.58.1",
     "@types/chrome": "^0.1.36",
     "@types/node-forge": "^1.3.14",
+    "@types/node": "^25.2.1",
     "@vitest/coverage-v8": "^4.0.18",
     "esbuild": "^0.27.2",
     "npm-check-updates": "^19.3.2",
@@ -29,7 +30,7 @@
     "test:unit:coverage": "vitest run --coverage",
     "watch": "esbuild src/bg.ts src/popup.ts src/intercept.ts src/viewer.ts --bundle --format=esm --platform=browser --outdir=dist --watch",
     "copy:static": "cp -R public/. dist/ && node scripts/generate-manifest.ts",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.scripts.json"
   },
   "dependencies": {
     "node-forge": "^1.3.3"
