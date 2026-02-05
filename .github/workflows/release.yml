@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - "*"
+      - "v*"
 
 permissions:
   contents: write
@@ -24,11 +24,14 @@ jobs:
       - name: Resolve version
         id: version
         run: |
-          VERSION="${GITHUB_REF_NAME}"
-          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Invalid tag format: $VERSION"
+          TAG="${GITHUB_REF_NAME}"
+          SEMVER_REGEX='^v([0-9]+\.[0-9]+\.[0-9]+)(-[0-9A-Za-z.-]+)?$'
+          if ! [[ "$TAG" =~ $SEMVER_REGEX ]]; then
+            echo "Invalid tag format (expected v1.2.3 or v1.2.3-rc.1): $TAG"
             exit 1
           fi
+          VERSION="${BASH_REMATCH[1]}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Install dependencies
@@ -42,8 +45,8 @@ jobs:
       - name: Package release artifact
         id: package
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          ZIP_NAME="odoo-fatturapa-viewer-${VERSION}.zip"
+          TAG="${{ steps.version.outputs.tag }}"
+          ZIP_NAME="odoo-fatturapa-viewer-${TAG}.zip"
           cd dist
           zip -r "../${ZIP_NAME}" .
           echo "zip_name=${ZIP_NAME}" >> "$GITHUB_OUTPUT"
