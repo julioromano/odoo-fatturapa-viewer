@@ -21,5 +21,10 @@ try {
 }
 manifest.version = version;
 
-fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-fs.writeFileSync(outputPath, `${JSON.stringify(manifest, null, 2)}\n`);
+try {
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  fs.writeFileSync(outputPath, `${JSON.stringify(manifest, null, 2)}\n`);
+} catch (error) {
+  console.error(`Failed to write manifest.json: ${(error as Error).message}`);
+  process.exit(1);
+}
