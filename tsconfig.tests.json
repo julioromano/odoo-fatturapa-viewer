@@ -4,15 +4,13 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "noEmit": true,
-    "lib": ["DOM", "ES2022"],
-    "rootDir": "src",
-    "outDir": "dist",
+    "lib": ["ES2022"],
+    "rootDir": ".",
     "strict": true,
     "noEmitOnError": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "types": ["chrome"],
-    "sourceMap": true
+    "types": ["node", "vitest/globals"]
   },
-  "include": ["src/**/*.ts"]
+  "include": ["tests/**/*.ts"]
 }
