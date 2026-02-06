@@ -47,6 +47,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          token: ${{ secrets.RELEASE_PAT }}
           files: ${{ steps.package.outputs.zip_name }}
           generate_release_notes: true
           fail_on_unmatched_files: true
