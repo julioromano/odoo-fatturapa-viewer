@@ -1,0 +1,51 @@
+name: Resolve version
+description: Parse and validate semver tags for releases.
+inputs:
+  tag:
+    description: Tag name to parse (e.g., v1.2.3 or v1.2.3-rc.1).
+    required: true
+  allow-prerelease:
+    description: Whether prerelease tags are allowed.
+    required: false
+    default: "true"
+outputs:
+  tag:
+    description: The original tag.
+    value: ${{ steps.resolve.outputs.tag }}
+  version:
+    description: The parsed semver without leading v.
+    value: ${{ steps.resolve.outputs.version }}
+  prerelease:
+    description: Whether the tag is a prerelease.
+    value: ${{ steps.resolve.outputs.prerelease }}
+runs:
+  using: composite
+  steps:
+    - id: resolve
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        TAG="${{ inputs.tag }}"
+        ALLOW_PRERELEASE="${{ inputs.allow-prerelease }}"
+        SEMVER_REGEX='^v([0-9]+\.[0-9]+\.[0-9]+)(-[0-9A-Za-z.-]+)?$'
+
+        if ! [[ "$TAG" =~ $SEMVER_REGEX ]]; then
+          echo "Invalid tag format (expected v1.2.3 or v1.2.3-rc.1): $TAG"
+          exit 1
+        fi
+
+        VERSION="${BASH_REMATCH[1]}"
+        PRERELEASE="false"
+
+        if [[ -n "${BASH_REMATCH[2]}" ]]; then
+          PRERELEASE="true"
+          if [[ "$ALLOW_PRERELEASE" != "true" ]]; then
+            echo "Prerelease tags are not allowed for publishing: $TAG"
+            exit 1
+          fi
+        fi
+
+        echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+        echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
