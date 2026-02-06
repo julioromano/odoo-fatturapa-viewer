@@ -1,0 +1,52 @@
+name: Publish
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: chrome-webstore-publish
+    steps:
+      - name: Guard against prerelease
+        run: |
+          if [[ "${{ github.event.release.prerelease }}" == "true" ]]; then
+            echo "Release is marked as prerelease; publishing is not allowed."
+            exit 1
+          fi
+          if [[ "${{ github.event.release.draft }}" == "true" ]]; then
+            echo "Release is marked as draft; publishing is not allowed."
+            exit 1
+          fi
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Resolve version
+        id: version
+        uses: ./.github/actions/resolve-version
+        with:
+          tag: ${{ github.event.release.tag_name }}
+          allow-prerelease: "false"
+
+      - name: Download release asset
+        id: download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          ZIP_NAME="odoo-fatturapa-viewer-${TAG}.zip"
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$ZIP_NAME"
+          echo "zip_name=$ZIP_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Publish to Chrome Web Store
+        uses: mnao305/chrome-extension-upload@v5
+        with:
+          file-path: ${{ steps.download.outputs.zip_name }}
+          extension-id: ${{ secrets.CWS_EXTENSION_ID }}
+          client-id: ${{ secrets.CWS_CLIENT_ID }}
+          client-secret: ${{ secrets.CWS_CLIENT_SECRET }}
+          refresh-token: ${{ secrets.CWS_REFRESH_TOKEN }}
+          publish: true

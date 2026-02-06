@@ -23,21 +23,9 @@ jobs:
 
       - name: Resolve version
         id: version
-        run: |
-          TAG="${GITHUB_REF_NAME}"
-          SEMVER_REGEX='^v([0-9]+\.[0-9]+\.[0-9]+)(-[0-9A-Za-z.-]+)?$'
-          if ! [[ "$TAG" =~ $SEMVER_REGEX ]]; then
-            echo "Invalid tag format (expected v1.2.3 or v1.2.3-rc.1): $TAG"
-            exit 1
-          fi
-          VERSION="${BASH_REMATCH[1]}"
-          PRERELEASE="false"
-          if [[ -n "${BASH_REMATCH[2]}" ]]; then
-            PRERELEASE="true"
-          fi
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
+        uses: ./.github/actions/resolve-version
+        with:
+          tag: ${{ github.ref_name }}
 
       - name: Install dependencies
         run: npm ci
