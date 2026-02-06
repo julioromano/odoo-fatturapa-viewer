@@ -42,7 +42,7 @@ jobs:
           echo "zip_name=$ZIP_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Publish to Chrome Web Store
-        uses: mnao305/chrome-extension-upload@v5
+        uses: mnao305/chrome-extension-upload@v5.0.0
         with:
           file-path: ${{ steps.download.outputs.zip_name }}
           extension-id: ${{ secrets.CWS_EXTENSION_ID }}
