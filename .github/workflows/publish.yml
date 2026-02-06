@@ -22,6 +22,8 @@ jobs:
             echo "Release is marked as draft; publishing is not allowed."
             exit 1
           fi
+      - name: Checkout
+        uses: actions/checkout@v6
       - name: Resolve version
         id: version
         uses: ./.github/actions/resolve-version
